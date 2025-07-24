@@ -115,7 +115,7 @@ class IntegratedBACCSystem:
             param_grid = {
                 'learning_rate': [1e-5, 5e-5, 1e-4, 5e-4],
                 'batch_size': [4, 8, 16],
-                'optimizer': ['adamw', 'adam'],
+                'optimizer': ['adamw'],
                 'loss_function': ['focal', 'weighted_ce', 'advanced_balanced'],
                 'enhance_small_features': [False, True],
                 'data_augmentation': [False, True],
@@ -127,7 +127,7 @@ class IntegratedBACCSystem:
                 'learning_rate': [1e-5, 5e-5, 1e-4, 5e-4],
                 'batch_size': [4, 8, 16],
                 'enhance_small_features': [False, True],
-                'optimizer': ['adamw', 'adam'],
+                'optimizer': ['adamw'],
                 'loss_function': ['focal', 'weighted_ce', 'advanced_balanced'],
                 'weight_decay': [1e-5, 1e-4, 1e-3],
                 'scheduler': ['cosine', 'plateau'],
