@@ -462,8 +462,8 @@ class BACCImprovementSystem:
 
 def main():
     parser = argparse.ArgumentParser(description="BACC Improvement System")
-    parser.add_argument('--method', type=int, choices=[1, 2, 3, 4, 5], 
-                       help='Method to run (1-5) or 0 for all')
+    parser.add_argument('--method', type=int, choices=[0, 1, 2, 3, 4, 5], 
+                       help='Method to run (0 for all, 1-5 for specific method)')
     parser.add_argument('--model', default='resnet18', choices=['resnet18', 'vit'])
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--gpu-id', type=int, default=0)
