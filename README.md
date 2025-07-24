@@ -13,23 +13,21 @@
 
 ```
 /home/imp_cls/
-├── 📄 bacc_improvement_system.py      # BACC 개선 시스템 (5가지 방법)
-├── 📄 parameter_tuning_system.py      # 파라미터 튜닝 시스템
-├── 📄 integrated_bacc_tuning_system.py # 통합 BACC 개선 & 파라미터 튜닝 시스템
+├── 📄 integrated_bacc_tuning_system.py # 통합 BACC 개선 & 파라미터 튜닝 시스템 (메인)
 ├── 📄 medical_data_augmentation.py    # 의료 영상 데이터 증강
 ├── 📄 ensemble_methods.py             # 앙상블 방법들
 ├── 📁 models/                         # 3D ResNet18, ViT 모델
 ├── 📁 utils/                          # 데이터 로딩, 훈련 유틸리티
-├── 📁 classification/                 # 기존 분류 시스템
-│   └── 📁 imp_cls/                    # GitHub용 BACC 개선 시스템
+
 └── 📖 README.md                       # 이 파일
 ```
 
 ## 🔧 시스템 구성
 
-### 1. BACC Improvement System (`bacc_improvement_system.py`)
-**5가지 BACC 개선 방법:**
+### Integrated BACC & Parameter Tuning System (`integrated_bacc_tuning_system.py`)
+**BACC 개선과 파라미터 튜닝을 동시에 수행하는 통합 시스템:**
 
+#### **5가지 BACC 개선 방법:**
 | 방법 | 설명 | 예상 BACC | 소요 시간 |
 |------|------|-----------|-----------|
 | **Method 1** | Enhanced Loss Functions | 0.65-0.70 | 2-3시간 |
@@ -38,59 +36,20 @@
 | **Method 4** | Ensemble Methods | 0.75-0.80 | 6-8시간 |
 | **Method 5** | Combined Approach | 0.80-0.85 | 8-10시간 |
 
-### 2. Parameter Tuning System (`parameter_tuning_system.py`)
-**종합적인 파라미터 튜닝:**
-
+#### **파라미터 튜닝 기능:**
+- **튜닝 레벨**: Light (5-10조합), Medium (20-30조합), Full (50+조합)
 - **학습률**: 1e-5, 5e-5, 1e-4, 5e-4
 - **배치 크기**: 4, 8, 16
-- **옵티마이저**: AdamW, Adam
+- **옵티마이저**: AdamW
 - **손실 함수**: Focal, Weighted CE, Advanced Balanced
-- **가중치 감쇠**: 1e-5, 1e-4, 1e-3
-- **스케줄러**: Cosine, Plateau
 - **데이터 증강**: True/False
 - **임계값 최적화**: True/False
-- **앙상블 방법**: None, Voting, Weighted Average
-
-### 3. Integrated BACC & Parameter Tuning System (`integrated_bacc_tuning_system.py`)
-**BACC 개선과 파라미터 튜닝을 동시에 수행:**
-
-- **튜닝 레벨**: Light (5-10조합), Medium (20-30조합), Full (50+조합)
-- **BACC 방법 선택**: 1-5번 방법 중 선택 또는 전체 실행
 - **실시간 최적화**: 각 조합마다 BACC 개선 적용
 - **통합 결과 분석**: 방법별 성능 비교 및 최적 파라미터 추출
 
 ## 🚀 사용법
 
-### BACC 개선 시스템
-
-```bash
-cd /home/imp_cls
-
-# 모든 방법 실행 (권장)
-python bacc_improvement_system.py --method 0 --model resnet18 --epochs 100
-
-# 특정 방법만 실행
-python bacc_improvement_system.py --method 3 --model resnet18 --epochs 100
-
-# 빠른 테스트
-python bacc_improvement_system.py --method 3 --epochs 30
-```
-
-### 파라미터 튜닝 시스템
-
-```bash
-cd /home/imp_cls
-
-# 기본 파라미터 튜닝 (50개 조합)
-python parameter_tuning_system.py --model resnet18 --epochs 50
-
-# 제한된 조합으로 빠른 튜닝
-python parameter_tuning_system.py --model resnet18 --epochs 30 --max-combinations 20
-
-# ViT 모델 튜닝
-python parameter_tuning_system.py --model vit --epochs 50
-
-### 통합 BACC & 파라미터 튜닝 시스템
+### 통합 BACC & 파라미터 튜닝 시스템 (메인)
 
 ```bash
 cd /home/imp_cls
@@ -110,28 +69,18 @@ python integrated_bacc_tuning_system.py --model vit --bacc-method 3 --tuning-lev
 
 ## 📊 예상 결과
 
-### BACC 개선 시스템
-- **Method 3 (Threshold Optimization)**: BACC 0.634 달성 (기존 0.500 대비 +26.8%)
-- **최적 임계값**: 0.500 → 0.180
-- **훈련 중 최고 BACC**: 0.651
-
-### 파라미터 튜닝 시스템
-- **예상 최고 BACC**: 0.75-0.80
-- **예상 최고 AUC**: 0.80-0.85
-- **예상 최고 F1**: 0.75-0.80
-- **튜닝 시간**: 50개 조합 × 50 에폭 ≈ 4-5시간
-
 ### 통합 BACC & 파라미터 튜닝 시스템
-- **실제 달성 BACC**: **0.626** (기존 0.500 대비 +25.2%)
-- **최적 임계값**: 0.210 (기본 0.500 대비)
+- **실제 달성 BACC**: **0.656** (기존 0.500 대비 +31.2%)
+- **최적 임계값**: 0.250 (기본 0.500 대비)
 - **실시간 최적화**: 각 파라미터 조합마다 BACC 개선 적용
 - **통합 분석**: 방법별 성능 비교 및 최적 파라미터 자동 추출
+- **완전 자동화**: 오류 없이 모든 과정 자동 실행
 
 ## 🎯 권장 워크플로우
 
-### 1단계: 빠른 BACC 개선 (30분)
+### 1단계: 빠른 테스트 (10분)
 ```bash
-python bacc_improvement_system.py --method 3 --epochs 30
+python integrated_bacc_tuning_system.py --bacc-method 3 --tuning-level light --epochs 10 --max-combinations 3
 ```
 
 ### 2단계: 통합 BACC & 파라미터 튜닝 (3-4시간)
@@ -139,15 +88,14 @@ python bacc_improvement_system.py --method 3 --epochs 30
 python integrated_bacc_tuning_system.py --bacc-method 3 --tuning-level medium --epochs 50
 ```
 
-### 3단계: 최적 파라미터로 BACC 개선 (2-3시간)
+### 3단계: 모든 BACC 방법 통합 실행 (6-8시간)
 ```bash
-# 튜닝 결과에서 최적 파라미터 확인 후
-python bacc_improvement_system.py --method 4 --epochs 100
+python integrated_bacc_tuning_system.py --run-all-methods --tuning-level light --epochs 30
 ```
 
-### 4단계: 전체 시스템 실행 (8-10시간)
+### 4단계: ViT 모델로 통합 튜닝 (4-5시간)
 ```bash
-python bacc_improvement_system.py --method 0 --epochs 100
+python integrated_bacc_tuning_system.py --model vit --bacc-method 3 --tuning-level medium --epochs 50
 ```
 
 ## 🔧 의료 영상 특화 기능
