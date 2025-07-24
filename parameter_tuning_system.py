@@ -327,6 +327,8 @@ class ParameterTuningSystem:
         
         # Save best parameters
         best_params = df.loc[best_bacc_idx].to_dict()
+        # Convert numpy types to native Python types for JSON serialization
+        best_params = {k: float(v) if isinstance(v, (np.integer, np.floating)) else v for k, v in best_params.items()}
         import json
         os.makedirs('./result/tuning', exist_ok=True)
         with open(f'./result/tuning/best_params_{df.loc[best_bacc_idx, "model_name"]}.json', 'w') as f:
