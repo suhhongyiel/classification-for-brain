@@ -148,7 +148,7 @@ class Enhanced3DResNet(nn.Module):
         layers=[2, 2, 2, 2],  # ResNet18 structure
         block_inplanes=[64, 128, 256, 512],
         enhance_small_features=False,
-        dropout_prob=0.2
+        dropout_rate=0.2
     ):
         super().__init__()
         
@@ -177,7 +177,7 @@ class Enhanced3DResNet(nn.Module):
                 nn.Sigmoid()
             )
         
-        # 3D ResNet using MONAI
+        # 3D ResNet using MONAI with built-in classifier
         self.resnet = ResNet(
             block=block,
             layers=layers,
@@ -194,7 +194,22 @@ class Enhanced3DResNet(nn.Module):
             bias_downsample=True
         )
         
-        # No additional classifier needed - using ResNet's built-in classifier
+        # Add dropout to the final layer
+        self.dropout_rate = dropout_rate
+        
+        # Replace the final fully connected layer with dropout version
+        if hasattr(self.resnet, 'fc'):
+            in_features = self.resnet.fc.in_features
+            self.resnet.fc = nn.Sequential(
+                nn.Dropout(p=dropout_rate),
+                nn.Linear(in_features, num_classes)
+            )
+        elif hasattr(self.resnet, 'classifier'):
+            in_features = self.resnet.classifier.in_features
+            self.resnet.classifier = nn.Sequential(
+                nn.Dropout(p=dropout_rate),
+                nn.Linear(in_features, num_classes)
+            )
         
         # Initialize weights
         self.apply(self._init_weights)
@@ -224,13 +239,13 @@ class Enhanced3DResNet(nn.Module):
             attention_weights = self.residual_attention(enhanced_x)
             x = enhanced_x * attention_weights + original_x
         
-        # Use ResNet directly for classification
+        # Use ResNet with built-in dropout classifier
         logits = self.resnet(x)
         
         return logits
 
 
-def get_model(model_name, num_classes=2, enhance_small_features=False, **kwargs):
+def get_model(model_name, num_classes=2, enhance_small_features=False, dropout_rate=0.1, **kwargs):
     """
     Factory function to get models
     
@@ -238,6 +253,7 @@ def get_model(model_name, num_classes=2, enhance_small_features=False, **kwargs)
         model_name: 'vit' or 'resnet18'
         num_classes: Number of output classes
         enhance_small_features: Whether to apply enhancement mechanisms
+        dropout_rate: Dropout rate for regularization
         **kwargs: Additional model parameters
     """
     
@@ -245,12 +261,14 @@ def get_model(model_name, num_classes=2, enhance_small_features=False, **kwargs)
         model = Enhanced3DViT(
             num_classes=num_classes,
             enhance_small_features=enhance_small_features,
+            dropout_rate=dropout_rate,
             **kwargs
         )
     elif model_name.lower() == 'resnet18':
         model = Enhanced3DResNet(
             num_classes=num_classes,
             enhance_small_features=enhance_small_features,
+            dropout_rate=dropout_rate,
             **kwargs
         )
     else:

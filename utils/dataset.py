@@ -14,6 +14,7 @@ from monai import transforms as monai_transforms
 from monai.data import PersistentDataset
 import warnings
 warnings.filterwarnings('ignore')
+import os
 
 
 class TAUSyntheticDataset(Dataset):
@@ -41,35 +42,66 @@ class TAUSyntheticDataset(Dataset):
         if self.cache_data and idx in self.cache:
             return self.cache[idx]
             
-        # Get file info
         row = self.data_df.iloc[idx]
-        file_path = row['file_path']
+        
+        # Check for file path column
+        if 'file_path' in row:
+            file_path = row['file_path']
+        elif 'filepath' in row:
+            file_path = row['filepath']
+        else:
+            raise KeyError("Neither 'file_path' nor 'filepath' column found in data CSV")
+        
         label = row['label']
         
-        # Load nii.gz file
+        # Load manually with nibabel (more reliable than MONAI LoadImage)
         try:
-            nii_img = nib.load(file_path)
-            image = nii_img.get_fdata().astype(np.float32)
-            
-            # Ensure correct shape (64, 64, 64)
-            if image.shape != (64, 64, 64):
-                print(f"Warning: Image {file_path} has shape {image.shape}, expected (64, 64, 64)")
+            # 파일 존재 확인
+            if not os.path.exists(file_path):
+                print(f"Warning: File not found: {file_path}")
+                image = torch.zeros((1, 64, 64, 64), dtype=torch.float32)
+            else:
+                nii_img = nib.load(file_path)
+                image = nii_img.get_fdata().astype(np.float32)
                 
-            # Add channel dimension for MONAI transforms (1, 64, 64, 64)
-            image = np.expand_dims(image, axis=0)
-            
+                # 메모리 정리
+                del nii_img
+                
+                # Ensure correct shape (64, 64, 64)
+                if image.shape != (64, 64, 64):
+                    print(f"Warning: Image {file_path} has shape {image.shape}, expected (64, 64, 64)")
+                    # Resize if needed
+                    if len(image.shape) == 3:
+                        # Simple resize to 64x64x64
+                        from scipy.ndimage import zoom
+                        zoom_factors = [64/s for s in image.shape]
+                        image = zoom(image, zoom_factors, order=1)
+                    else:
+                        image = np.zeros((64, 64, 64), dtype=np.float32)
+                
+                # Add channel dimension for MONAI transforms (1, 64, 64, 64)
+                image = np.expand_dims(image, axis=0)
+                image = torch.from_numpy(image).float()
+                
+                # Normalize to [0, 1] with better numerical stability
+                if image.max() > image.min():
+                    image = (image - image.min()) / (image.max() - image.min() + 1e-8)
+                else:
+                    image = torch.zeros_like(image)
+                    
         except Exception as e:
             print(f"Error loading {file_path}: {e}")
             # Return zero tensor if loading fails
-            image = np.zeros((1, 64, 64, 64), dtype=np.float32)
+            image = torch.zeros((1, 64, 64, 64), dtype=torch.float32)
         
-        # Apply transforms
+        # Apply custom augmentation if transform is provided
         if self.transform:
-            image = self.transform(image)
-        
-        # Convert to tensor if not already
-        if not isinstance(image, torch.Tensor):
-            image = torch.from_numpy(image).float()
+            try:
+                # Apply transform directly on the image tensor
+                image = self.transform(image)
+            except Exception as e:
+                print(f"Error applying transform to {file_path}: {e}")
+                # Keep original image if transform fails
         
         # Ensure shape is correct (C, H, W, D)
         if len(image.shape) == 3:

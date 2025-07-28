@@ -1,22 +1,19 @@
-# Data files (too large for GitHub)
-data/
-*.csv
-*.nii.gz
-*.nii
-
-# Results and checkpoints
-result/
-checkpoints/
+# Training results and models
+results/
 *.pth
 *.pt
 *.ckpt
+*.h5
+*.hdf5
 
-# Logs
-logs/
+# Logs and temporary files
 *.log
-tensorboard_logs/
+*.txt
+*.csv
+!data/*.csv
+!requirements.txt
 
-# Python
+# Python cache
 __pycache__/
 *.py[cod]
 *$py.class
@@ -37,34 +34,34 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
 # Virtual environments
 venv/
 env/
 ENV/
-env.bak/
-venv.bak/
+.venv/
+.env/
 
-# IDE
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS
+# OS files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Jupyter
-.ipynb_checkpoints
+# Jupyter notebooks
+.ipynb_checkpoints/
 
-# Temporary files
-*.tmp
-*.temp 
+# Data files (keep only mapping CSV)
+data/*.nii.gz
+data/*.nii
+data/*.hdr
+data/*.img
+
+# Keep only essential files
+!data/*_mapping.csv
+!data/*_mapping.txt 

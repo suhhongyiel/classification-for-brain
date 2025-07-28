@@ -9,6 +9,8 @@ import torch.nn as nn
 import numpy as np
 import pandas as pd
 import random
+import monai
+from packaging import version
 from monai import transforms as monai_transforms
 import warnings
 warnings.filterwarnings('ignore')
@@ -25,7 +27,8 @@ class MedicalImageAugmentation:
                  contrast_prob=0.3,
                  gamma_prob=0.3,
                  blur_prob=0.2,
-                 sharpen_prob=0.2):
+                 sharpen_prob=0.2,
+                 mixup_prob=0.1):  # Add mixup probability
         
         self.noise_prob = noise_prob
         self.brightness_prob = brightness_prob
@@ -33,6 +36,7 @@ class MedicalImageAugmentation:
         self.gamma_prob = gamma_prob
         self.blur_prob = blur_prob
         self.sharpen_prob = sharpen_prob
+        self.mixup_prob = mixup_prob
         
     def add_gaussian_noise(self, image, mean=0.0, std=0.01):
         """Add Gaussian noise to image"""
@@ -68,36 +72,26 @@ class MedicalImageAugmentation:
         return torch.from_numpy(blurred).float()
     
     def sharpen(self, image, strength=0.5):
-        """Apply sharpening filter"""
-        # Simple sharpening kernel
-        kernel = torch.tensor([
-            [[0, 0, 0], [0, 1, 0], [0, 0, 0]],
-            [[0, 0, 0], [0, 1, 0], [0, 0, 0]],
-            [[0, 0, 0], [0, 1, 0], [0, 0, 0]]
-        ]).float().unsqueeze(0).unsqueeze(0) / 3.0
+        """Sharpen image using unsharp masking"""
+        # Create a blurred version
+        blurred = self.gaussian_blur(image, sigma=1.0)
         
-        # Apply convolution
-        if len(image.shape) == 4:  # (C, H, W, D)
-            image = image.unsqueeze(0)  # Add batch dimension
-            
-        sharpened = torch.nn.functional.conv3d(
-            image, kernel, padding=1
-        )
-        
-        # Blend original and sharpened
-        result = image * (1 - strength) + sharpened * strength
-        return result.squeeze(0) if len(image.shape) == 5 else result
+        # Unsharp masking
+        sharpened = image + strength * (image - blurred)
+        return torch.clamp(sharpened, 0, 1)
+    
+    def mixup(self, image, alpha=0.2):
+        """Mixup augmentation with random noise"""
+        if random.random() < self.mixup_prob:
+            # Create random noise with same shape
+            noise = torch.randn_like(image) * 0.1
+            # Mix with original image
+            mixed = image * (1 - alpha) + noise * alpha
+            return torch.clamp(mixed, 0, 1)
+        return image
     
     def __call__(self, image):
         """Apply augmentations with probabilities"""
-        if isinstance(image, np.ndarray):
-            image = torch.from_numpy(image).float()
-        
-        # Ensure image is in [0, 1] range
-        if image.max() > 1:
-            image = image / image.max()
-        
-        # Apply augmentations
         if random.random() < self.noise_prob:
             image = self.add_gaussian_noise(image)
             
@@ -115,6 +109,9 @@ class MedicalImageAugmentation:
             
         if random.random() < self.sharpen_prob:
             image = self.sharpen(image)
+            
+        # Apply mixup at the end
+        image = self.mixup(image)
         
         return image
 
@@ -164,40 +161,31 @@ class BalancedDatasetAugmentation:
         
         return augmented_df
 
-def create_medical_transforms(augment=True, intensity=0.3):
+def create_medical_transforms(augment=True, intensity=0.9):
     """
-    Create medical image transforms
+    Create simple medical transforms without MONAI LoadImage
+    Since we load images manually in dataset, just return augmentation wrapper
     """
-    if not augment:
-        return monai_transforms.Compose([
-            monai_transforms.LoadImaged(keys=["image"]),
-            monai_transforms.AddChanneld(keys=["image"]),
-            monai_transforms.ScaleIntensityd(keys=["image"], minv=0.0, maxv=1.0),
-        ])
+    class SimpleTransform:
+        def __init__(self, augment=True, intensity=0.9):
+            self.augment = augment
+            self.augmenter = MedicalImageAugmentation(
+                noise_prob=intensity,
+                brightness_prob=intensity,
+                contrast_prob=intensity,
+                gamma_prob=intensity,
+                blur_prob=intensity*0.9,  # Very high blur probability
+                sharpen_prob=intensity*0.8,  # Very high sharpen probability
+                mixup_prob=intensity*0.5  # High mixup probability
+            ) if augment else None
+            
+        def __call__(self, image):
+            # Image is already loaded as tensor in dataset
+            if self.augment and self.augmenter:
+                return self.augmenter(image)
+            return image
     
-    return monai_transforms.Compose([
-        monai_transforms.LoadImaged(keys=["image"]),
-        monai_transforms.AddChanneld(keys=["image"]),
-        monai_transforms.ScaleIntensityd(keys=["image"], minv=0.0, maxv=1.0),
-        
-        # Medical-appropriate augmentations
-        monai_transforms.RandGaussianNoised(
-            keys=["image"], 
-            prob=intensity, 
-            mean=0.0, 
-            std=0.01
-        ),
-        monai_transforms.RandAdjustContrastd(
-            keys=["image"], 
-            prob=intensity, 
-            gamma=(0.8, 1.2)
-        ),
-        monai_transforms.RandGaussianSmoothd(
-            keys=["image"], 
-            prob=intensity * 0.5, 
-            sigma_x=(0.5, 1.0)
-        ),
-    ])
+    return SimpleTransform(augment=augment, intensity=intensity)
 
 if __name__ == "__main__":
     # Test augmentation

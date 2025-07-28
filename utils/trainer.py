@@ -70,6 +70,18 @@ class MetricsTracker:
         targets = np.array(self.targets)
         probs = np.array(self.probabilities)[:, 1]  # Probability of positive class
         
+        # Check for NaN values and replace them
+        if np.any(np.isnan(probs)):
+            print(f"Warning: Found {np.sum(np.isnan(probs))} NaN values in probabilities, replacing with 0.5")
+            probs = np.nan_to_num(probs, nan=0.5)
+            
+        if np.any(np.isnan(preds)):
+            print(f"Warning: Found {np.sum(np.isnan(preds))} NaN values in predictions, replacing with 0")
+            preds = np.nan_to_num(preds, nan=0)
+        
+        # Ensure probabilities are in valid range [0, 1]
+        probs = np.clip(probs, 0.0, 1.0)
+        
         # Compute metrics
         auc = roc_auc_score(targets, probs) if len(np.unique(targets)) > 1 else 0.5
         f1 = f1_score(targets, preds, average='weighted')
@@ -140,8 +152,25 @@ class TAUTrainer:
             outputs = self.model(images)
             loss = self.criterion(outputs, labels)
             
+            # Check for NaN loss
+            if torch.isnan(loss) or torch.isinf(loss):
+                print(f"Warning: NaN/Inf loss detected at batch {batch_idx}, skipping...")
+                continue
+            
             # Backward pass
             loss.backward()
+            
+            # Check for NaN gradients
+            has_nan_grad = False
+            for name, param in self.model.named_parameters():
+                if param.grad is not None and (torch.isnan(param.grad).any() or torch.isinf(param.grad).any()):
+                    print(f"Warning: NaN/Inf gradient in {name}, skipping update...")
+                    has_nan_grad = True
+                    break
+                    
+            if has_nan_grad:
+                self.optimizer.zero_grad()
+                continue
             
             # Gradient clipping
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
